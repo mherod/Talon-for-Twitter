@@ -16,26 +16,28 @@
 
 package com.klinker.android.twitter.activity;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.speech.RecognizerIntent;
 import android.support.wearable.view.GridViewPager;
 import android.view.View;
 import android.widget.TextView;
 import com.klinker.android.twitter.R;
-import com.klinker.android.twitter.adapter.ArticleGridPagerAdapter;
+import com.klinker.android.twitter.adapter.TweetGridPagerAdapter;
 import com.klinker.android.twitter.transaction.KeyProperties;
 import com.klinker.android.twitter.view.CircularProgressBar;
+
+import java.util.List;
 
 public class WearActivity extends WearTransactionActivity {
 
     private static final String TAG = "WearActivity";
 
     private GridViewPager viewPager;
-    private ArticleGridPagerAdapter adapter;
+    private TweetGridPagerAdapter adapter;
     private CircularProgressBar progressBar;
     private TextView emptyView;
 
@@ -48,7 +50,7 @@ public class WearActivity extends WearTransactionActivity {
 
         setContentView(R.layout.activity_wear);
         viewPager = (GridViewPager) findViewById(R.id.article_pager);
-        adapter = new ArticleGridPagerAdapter(this);
+        adapter = new TweetGridPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
         progressBar = (CircularProgressBar) findViewById(R.id.progress_bar);
@@ -67,7 +69,9 @@ public class WearActivity extends WearTransactionActivity {
 
             @Override
             public void onPageSelected(int row, int col) {
-                sendReadStatus(getIds().get(row));
+                try {
+                    sendReadStatus(getIds().get(row - 2));
+                } catch (Exception e) { }
             }
 
             @Override
@@ -78,28 +82,64 @@ public class WearActivity extends WearTransactionActivity {
 
     @Override
     public void updateDisplay() {
-        if (getTitles().size() > 0) {
-            progressBar.setVisibility(View.GONE);
-            viewPager.setVisibility(View.VISIBLE);
-            emptyView.setVisibility(View.GONE);
-            adapter = new ArticleGridPagerAdapter(this);
-            viewPager.setAdapter(adapter);
+        progressBar.setVisibility(View.GONE);
+        viewPager.setVisibility(View.VISIBLE);
+        emptyView.setVisibility(View.GONE);
+        adapter = new TweetGridPagerAdapter(this);
+        viewPager.setAdapter(adapter);
 
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    viewPager.setCurrentItem(adapter.getRowCount() - 1,0, adapter.getRowCount() > 20 ? false : true);
-                }
-            }, 300);
-        } else {
-            progressBar.setVisibility(View.GONE);
-            viewPager.setVisibility(View.GONE);
-            emptyView.setVisibility(View.VISIBLE);
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (adapter.getRowCount() > 2)
+                    viewPager.setCurrentItem(adapter.getRowCount() - 3,0, adapter.getRowCount() > 20 ? false : true);
+                else
+                    viewPager.setCurrentItem(adapter.getRowCount() - 2,0, true);
+            }
+        }, 500);
+    }
 
-            Drawable biker = getResources().getDrawable(R.drawable.ic_biker);
-            biker.setColorFilter(accentColor, PorterDuff.Mode.MULTIPLY);
-            emptyView.setCompoundDrawablesWithIntrinsicBounds(null, biker, null, null);
+    private static final int COMPOSE_REQUEST_CODE = 101;
+    private static final int REPLY_REQUEST_CODE = 102;
+
+    public void startComposeRequest() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+
+        startActivityForResult(intent, COMPOSE_REQUEST_CODE);
+    }
+
+    private String replyingToScreenname = "";
+    private long replyingToTweetId = 0l;
+    public void startReplyRequest(String screenname, long tweetId) {
+        this.replyingToScreenname = screenname;
+        this.replyingToTweetId = tweetId;
+
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+
+        startActivityForResult(intent, REPLY_REQUEST_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode,
+                                    Intent data) {
+        if (requestCode == COMPOSE_REQUEST_CODE && resultCode == RESULT_OK) {
+            List<String> results = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+
+            sendComposeRequest(spokenText);
+        } else if (requestCode == REPLY_REQUEST_CODE && resultCode == RESULT_OK) {
+            List<String> results = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+
+            sendReplyRequest(replyingToTweetId, replyingToScreenname, spokenText);
         }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
 }

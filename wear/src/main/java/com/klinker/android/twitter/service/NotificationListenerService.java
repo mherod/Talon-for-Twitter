@@ -19,6 +19,7 @@ package com.klinker.android.twitter.service;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 import com.google.android.gms.wearable.DataMap;
@@ -45,14 +46,14 @@ public class NotificationListenerService extends WearableListenerService {
 
             Notification notification = new Notification.Builder(this)
                     .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle(map.getString(KeyProperties.KEY_TITLE))
+                    .setContentTitle(map.getString(KeyProperties.KEY_USER_NAME))
                     .setContentText(map.getString(KeyProperties.KEY_TWEET))
                     .setTicker(map.getString(KeyProperties.KEY_TWEET))
                     .addAction(R.drawable.ic_logo, getString(R.string.view_articles), notificationPendingIntent)
                     .build();
             notification.defaults = Notification.DEFAULT_ALL;
 
-            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             manager.notify(NOTIFICATION_ID, notification);
         }
     }

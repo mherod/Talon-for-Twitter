@@ -14,14 +14,6 @@
  * limitations under the License.
  */
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:0.13.3'
-    }
-}
 apply plugin: 'com.android.library'
 
 repositories {
@@ -33,19 +25,27 @@ android {
     buildToolsVersion project.BUILD_TOOLS_VERSION
 
     defaultConfig {
-        applicationId "com.klinker.android.twitter.shared"
+        minSdkVersion Integer.parseInt(project.MIN_SDK)
+        targetSdkVersion Integer.parseInt(project.TARGET_SDK)
         versionCode Integer.parseInt(project.VERSION_CODE)
         versionName project.VERSION_NAME
     }
 
     buildTypes {
         release {
-            runProguard false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), '../app/proguard-rules.pro'
         }
     }
 
     lintOptions {
         abortOnError false
     }
+}
+
+dependencies {
+    compile "com.google.android.gms:play-services-location:${project.GOOGLE_PLAY_SERVICES_VERSION}"
+    compile "com.google.android.gms:play-services-wearable:${project.GOOGLE_PLAY_SERVICES_VERSION}"
+    compile "com.android.support:support-v13:${project.ANDROID_SUPPORT_VERSION}"
 }
